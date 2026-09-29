@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en" class="h-full bg-slate-900">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IT Support Ticket Management System</title>
+    <meta name="description" content="Enterprise IT support ticketing platform for submitting, prioritizing, and resolving technical issues across hardware, network, software, and access management." />
+    <meta property="og:title" content="IT Support Ticket Management System" />
+    <meta property="og:description" content="Enterprise IT support ticketing platform for submitting, prioritizing, and resolving technical issues across hardware, network, software, and access management." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN for instant rendering in VS Code Live Server -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./src/index.css" />
+  </head>
+  <body class="h-full min-h-screen antialiased font-sans text-slate-100 bg-slate-950 selection:bg-indigo-500/30 selection:text-indigo-200 flex flex-col">
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/95 px-4 sm:px-6 backdrop-blur-md">
+      <!-- Brand Title -->
+      <div class="flex items-center gap-3">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="12" r="9" stroke-width="2"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01"/>
+          </svg>
+        </div>
+        <span class="text-base font-semibold tracking-tight text-slate-100">
+          OpsDesk IT
+        </span>
+        <span id="system-status-indicator" class="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="system-status-text">SQL DB Ready</span>
+        </span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1 sm:gap-2">
+        <button id="nav-tab-list" class="nav-tab px-3 py-1.5 text-xs font-medium rounded-md bg-slate-800 text-slate-100 transition-colors">
+          Queue Table
+        </button>
+        <button id="nav-tab-kanban" class="nav-tab px-3 py-1.5 text-xs font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors">
+          Kanban Board
+        </button>
+        <button id="nav-tab-metrics" class="nav-tab px-3 py-1.5 text-xs font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors">
+          SLA & Metrics
+        </button>
+        <button id="nav-tab-sql" class="nav-tab px-3 py-1.5 text-xs font-medium rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors flex items-center gap-1.5">
+          <span class="font-mono text-[10px] bg-indigo-950 border border-indigo-800/60 px-1 rounded text-indigo-300">SQL</span>
+          <span>Console</span>
+        </button>
+      </nav>
+
+      <!-- Primary Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="btn-refresh" title="Refresh Data" class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200 transition-colors">
+          <svg id="icon-refresh" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+
+        <!-- Current User Profile & Role Switcher Button -->
+        <button id="btn-open-auth-modal" title="Switch User Account or Role" class="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/90 hover:border-slate-700 hover:bg-slate-800/80 px-2.5 py-1 text-left transition-colors">
+          <div id="user-avatar-badge" class="h-6 w-6 rounded-full overflow-hidden bg-indigo-600/30 flex items-center justify-center text-[10px] font-bold text-indigo-300 border border-indigo-500/40 shrink-0">
+            SJ
+          </div>
+          <div class="hidden sm:flex flex-col leading-tight">
+            <div class="flex items-center gap-1.5">
+              <span id="user-display-name" class="text-xs font-medium text-slate-200 truncate max-w-[110px]">Sarah Jenkins</span>
+              <span id="user-role-badge" class="font-mono text-[9px] font-bold px-1 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 uppercase">ADMIN</span>
+            </div>
+            <span id="user-dept-display" class="text-[10px] text-slate-400 truncate max-w-[120px]">IT & Systems</span>
+          </div>
+          <svg class="h-3 w-3 text-slate-500 hidden sm:block shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <button id="btn-open-submit" class="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-500 transition-colors whitespace-nowrap">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>New Ticket</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Viewport -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
+      <!-- Section Header & Quick Stats -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800/80">
+        <div>
+          <h1 id="page-title" class="text-xl font-bold tracking-tight text-slate-100">
+            Support Ticket Queue
+          </h1>
+          <p id="page-subtitle" class="text-xs text-slate-400 mt-0.5">
+            Real-time database records with 1-click status transitions and bulk actions
+          </p>
+        </div>
+
+        <div id="header-stats" class="flex items-center gap-3 text-xs text-slate-400 font-mono tabular-nums">
+          <span class="flex items-center gap-1.5">
+            <span class="h-2 w-2 rounded-full bg-sky-400"></span>
+            <span id="stat-open-count">0</span> Open
+          </span>
+          <span aria-hidden="true" class="text-slate-700">·</span>
+          <span class="flex items-center gap-1.5">
+            <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+            <span id="stat-progress-count">0</span> In Progress
+          </span>
+          <span aria-hidden="true" class="text-slate-700">·</span>
+          <span class="flex items-center gap-1.5">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            <span id="stat-resolved-count">0</span> Resolved
+          </span>
+        </div>
+      </div>
+
+      <!-- Filter Bar (Visible in Table and Kanban views) -->
+      <div id="filter-bar" class="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3.5 backdrop-blur-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <!-- Search Input -->
+          <div class="relative min-w-[240px] flex-1 sm:max-w-md">
+            <svg class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              id="filter-search"
+              type="text"
+              placeholder="Search tickets, IDs, descriptions, submitters, asset tags..."
+              class="w-full rounded-md border border-slate-800 bg-slate-950/80 py-1.5 pl-8 pr-8 text-xs text-slate-200 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button id="filter-search-clear" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Status Segmented Buttons & My Tickets Toggle -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-1 rounded-md border border-slate-800 bg-slate-950 p-1">
+              <button data-status="all" class="filter-status-btn rounded px-2.5 py-1 text-xs font-medium bg-slate-800 text-slate-100 shadow-xs transition-colors">All</button>
+              <button data-status="open" class="filter-status-btn rounded px-2.5 py-1 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">Open</button>
+              <button data-status="in_progress" class="filter-status-btn rounded px-2.5 py-1 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">In Progress</button>
+              <button data-status="resolved" class="filter-status-btn rounded px-2.5 py-1 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">Resolved</button>
+              <button data-status="closed" class="filter-status-btn rounded px-2.5 py-1 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">Closed</button>
+            </div>
+
+            <!-- My Tickets Filter Toggle for logged-in employees -->
+            <button id="btn-toggle-my-tickets" class="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1 text-xs font-medium text-slate-400 hover:text-indigo-300 hover:border-slate-700 transition-colors">
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              <span>My Tickets</span>
+            </button>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-2">
+            <button id="btn-reset-filters" class="hidden flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-rose-400 transition-colors">
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>Reset</span>
+            </button>
+
+            <button id="btn-export-csv" title="Export filtered tickets to CSV" class="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-700 hover:text-white transition-colors">
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span class="hidden sm:inline">Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Secondary Filter Dropdowns -->
+        <div class="flex flex-wrap items-center gap-2 border-t border-slate-800/80 pt-2.5 text-xs text-slate-400">
+          <div class="flex items-center gap-1.5 text-slate-500 mr-1">
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>Filters:</span>
+          </div>
+
+          <select id="filter-priority" aria-label="Filter by priority" class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-indigo-500 focus:outline-none">
+            <option value="all">All Priorities</option>
+            <option value="critical">Critical (4h SLA)</option>
+            <option value="high">High (12h SLA)</option>
+            <option value="medium">Medium (24h SLA)</option>
+            <option value="low">Low (48h SLA)</option>
+          </select>
+
+          <select id="filter-category" aria-label="Filter by category" class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-indigo-500 focus:outline-none">
+            <option value="all">All Categories</option>
+            <option value="hardware">Hardware & Devices</option>
+            <option value="network">Network & Wi-Fi</option>
+            <option value="software">Software & Apps</option>
+            <option value="access">Access & Identity</option>
+            <option value="security">Security</option>
+            <option value="other">Other / General</option>
+          </select>
+
+          <select id="filter-department" aria-label="Filter by department" class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-indigo-500 focus:outline-none">
+            <option value="all">All Departments</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Data & Analytics">Data & Analytics</option>
+            <option value="Design">Design</option>
+            <option value="Finance">Finance</option>
+            <option value="Sales">Sales</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Operations">Operations</option>
+            <option value="Customer Support">Customer Support</option>
+          </select>
+
+          <select id="filter-assignee" aria-label="Filter by assignee" class="rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-indigo-500 focus:outline-none">
+            <option value="all">All Assignees</option>
+            <option value="unassigned">Unassigned Only</option>
+            <!-- Dynamically populated -->
+          </select>
+
+          <div class="ml-auto text-xs text-slate-400 font-mono tabular-nums">
+            Showing <span id="filter-count" class="text-slate-200 font-semibold">0</span> tickets
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 1: Queue Table View -->
+      <section id="view-list" class="space-y-3">
+        <!-- Bulk Action Toolbar -->
+        <div id="bulk-toolbar" class="hidden items-center justify-between rounded-md border border-indigo-500/30 bg-indigo-950/40 px-3 py-2 text-xs">
+          <div class="flex items-center gap-2 text-indigo-300">
+            <span id="bulk-count" class="font-semibold font-mono tabular-nums">0</span> tickets selected
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-bulk-in-progress" class="rounded bg-slate-800 px-2 py-1 text-xs font-medium text-slate-200 hover:bg-slate-700">Set In Progress</button>
+            <button id="btn-bulk-resolved" class="rounded bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-1 text-xs font-medium hover:bg-emerald-900">Set Resolved</button>
+            <button id="btn-bulk-delete" class="flex items-center gap-1 rounded bg-red-950/60 text-red-300 border border-red-800/60 px-2 py-1 text-xs font-medium hover:bg-red-900/80">Delete</button>
+            <button id="btn-bulk-clear" class="text-xs text-slate-400 hover:text-slate-200 ml-2">Deselect</button>
+          </div>
+        </div>
+
+        <!-- High Density Data Table -->
+        <div class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 shadow-sm backdrop-blur-sm">
+          <table class="w-full text-left text-xs">
+            <thead class="border-b border-slate-800 bg-slate-950/80 text-[11px] font-medium text-slate-400">
+              <tr>
+                <th class="w-10 px-3 py-2.5">
+                  <input id="th-select-all" type="checkbox" aria-label="Select all tickets" class="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-950" />
+                </th>
+                <th class="w-24 px-3 py-2.5">ID</th>
+                <th class="min-w-[280px] px-3 py-2.5">Issue & Submitter</th>
+                <th class="w-32 px-3 py-2.5">Category</th>
+                <th class="w-28 px-3 py-2.5">Priority</th>
+                <th class="w-36 px-3 py-2.5">Status & Action</th>
+                <th class="w-40 px-3 py-2.5">Assignee</th>
+                <th class="w-28 px-3 py-2.5 text-right">SLA / Time</th>
+                <th class="w-16 px-3 py-2.5 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="tickets-table-body" class="divide-y divide-slate-800/60">
+              <!-- Dynamically populated via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 2: Kanban Board View -->
+      <section id="view-kanban" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+          <!-- Column Open -->
+          <div class="flex flex-col rounded-lg border border-slate-800 bg-slate-900/40 p-3 min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-sky-400">Open</span>
+                <span id="kanban-count-open" class="font-mono text-[11px] tabular-nums text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">0</span>
+              </div>
+              <button id="btn-kanban-add-open" title="Quick add ticket" class="p-1 text-slate-400 hover:text-white transition-colors">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+            <div id="kanban-col-open" class="flex flex-col gap-2.5 flex-1"></div>
+          </div>
+
+          <!-- Column In Progress -->
+          <div class="flex flex-col rounded-lg border border-slate-800 bg-slate-900/40 p-3 min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-amber-400">In Progress</span>
+                <span id="kanban-count-in_progress" class="font-mono text-[11px] tabular-nums text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">0</span>
+              </div>
+            </div>
+            <div id="kanban-col-in_progress" class="flex flex-col gap-2.5 flex-1"></div>
+          </div>
+
+          <!-- Column Resolved -->
+          <div class="flex flex-col rounded-lg border border-slate-800 bg-slate-900/40 p-3 min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-emerald-400">Resolved</span>
+                <span id="kanban-count-resolved" class="font-mono text-[11px] tabular-nums text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">0</span>
+              </div>
+            </div>
+            <div id="kanban-col-resolved" class="flex flex-col gap-2.5 flex-1"></div>
+          </div>
+
+          <!-- Column Closed -->
+          <div class="flex flex-col rounded-lg border border-slate-800 bg-slate-900/40 p-3 min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-slate-400">Closed / Archived</span>
+                <span id="kanban-count-closed" class="font-mono text-[11px] tabular-nums text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">0</span>
+              </div>
+            </div>
+            <div id="kanban-col-closed" class="flex flex-col gap-2.5 flex-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: SLA & Metrics View -->
+      <section id="view-metrics" class="hidden space-y-6">
+        <!-- Top Stats Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span>Active Queue</span>
+              <svg class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            </div>
+            <div id="metric-active" class="font-mono text-2xl font-bold tabular-nums text-slate-100">0</div>
+            <div id="metric-active-sub" class="mt-1 text-[11px] text-slate-500">0 open · 0 in progress</div>
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span>SLA Breaches</span>
+              <svg class="h-4 w-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div id="metric-breached" class="font-mono text-2xl font-bold tabular-nums text-rose-400">0</div>
+            <div id="metric-risk-sub" class="mt-1 text-[11px] text-slate-500">0 approaching deadline (&lt;4h)</div>
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span>Critical Incidents</span>
+              <svg class="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div id="metric-critical" class="font-mono text-2xl font-bold tabular-nums text-amber-400">0</div>
+            <div class="mt-1 text-[11px] text-slate-500">Immediate 4-hour SLA response</div>
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+              <span>Resolution Rate</span>
+              <svg class="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div id="metric-rate" class="font-mono text-2xl font-bold tabular-nums text-emerald-400">0%</div>
+            <div id="metric-rate-sub" class="mt-1 text-[11px] text-slate-500">0 of 0 resolved</div>
+          </div>
+        </div>
+
+        <!-- Breakdown Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
+              Tickets by Technical Category
+            </h3>
+            <div id="category-distribution" class="space-y-3"></div>
+          </div>
+
+          <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
+              Tickets by Priority Level
+            </h3>
+            <div id="priority-distribution" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- Real-time Activity Stream -->
+        <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <svg class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Recent System Activity Stream
+              </h3>
+            </div>
+            <button id="btn-reset-demo" class="flex items-center gap-1.5 rounded border border-slate-800 bg-slate-950 px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+              <svg id="icon-reset-demo" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Reset Demo Data</span>
+            </button>
+          </div>
+          <div id="metrics-activity-stream" class="divide-y divide-slate-800/60"></div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Live SQL Query Console (Demonstrating Relational SQL Database) -->
+      <section id="view-sql" class="hidden space-y-4">
+        <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <div class="flex h-6 w-6 items-center justify-center rounded bg-indigo-950 border border-indigo-700/60 text-indigo-400 font-mono text-[10px] font-bold">
+                SQL
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-slate-100">Live SQLite Database Console</h3>
+                <p class="text-xs text-slate-400">Direct SQL query execution against the SQLite database (<code class="font-mono text-indigo-300">tickets.sqlite</code>)</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+              <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span>Tables: <code class="text-slate-200 font-mono">tickets</code>, <code class="text-slate-200 font-mono">ticket_activities</code></span>
+            </div>
+          </div>
+
+          <!-- Quick Query Shortcut Buttons -->
+          <div class="flex flex-wrap items-center gap-1.5 py-2 border-y border-slate-800/80 mb-3 text-xs">
+            <span class="text-slate-500 mr-1 text-[11px]">Preset Queries:</span>
+            <button class="sql-preset-btn rounded border border-slate-800 bg-slate-950 px-2 py-1 text-slate-300 hover:border-indigo-500 hover:text-white font-mono text-[11px]" data-query="SELECT id, title, category, priority, status, submitter_name FROM tickets ORDER BY created_at DESC LIMIT 10;">SELECT 10 Tickets</button>
+            <button class="sql-preset-btn rounded border border-slate-800 bg-slate-950 px-2 py-1 text-slate-300 hover:border-indigo-500 hover:text-white font-mono text-[11px]" data-query="SELECT category, COUNT(*) AS ticket_count, SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) AS resolved_count FROM tickets GROUP BY category;">Count by Category</button>
+            <button class="sql-preset-btn rounded border border-slate-800 bg-slate-950 px-2 py-1 text-slate-300 hover:border-indigo-500 hover:text-white font-mono text-[11px]" data-query="SELECT id, title, priority, sla_due_at, submitter_email FROM tickets WHERE priority = 'critical' AND status != 'resolved';">Critical SLA Watch</button>
+            <button class="sql-preset-btn rounded border border-slate-800 bg-slate-950 px-2 py-1 text-slate-300 hover:border-indigo-500 hover:text-white font-mono text-[11px]" data-query="SELECT ticket_id, actor_name, action_type, comment, created_at FROM ticket_activities ORDER BY created_at DESC LIMIT 8;">Recent Audit Logs</button>
+          </div>
+
+          <!-- Query Input -->
+          <div class="space-y-2">
+            <label class="block text-xs font-mono text-slate-400">SQL Statement:</label>
+            <div class="relative">
+              <textarea
+                id="sql-query-input"
+                rows="4"
+                class="w-full rounded-md border border-slate-800 bg-slate-950 p-3 font-mono text-xs text-indigo-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                spellcheck="false"
+              >SELECT id, title, category, priority, status, assignee_name FROM tickets ORDER BY created_at DESC LIMIT 10;</textarea>
+            </div>
+            <div class="flex items-center justify-between">
+              <span id="sql-execution-status" class="text-xs text-slate-400 font-mono"></span>
+              <button id="btn-execute-sql" class="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 transition-colors">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Execute SQL</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Query Results Grid -->
+          <div class="mt-4">
+            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Query Results Table</h4>
+            <div id="sql-results-container" class="overflow-x-auto rounded border border-slate-800 bg-slate-950 p-2 min-h-[140px] max-h-[360px] overflow-y-auto">
+              <p class="text-xs text-slate-500 p-4 text-center">Click "Execute SQL" to inspect database tables.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal: New Ticket Submission Portal -->
+    <div id="modal-submit" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+      <div class="relative w-full max-w-2xl rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden my-8">
+        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-6 py-4">
+          <div>
+            <h2 class="text-base font-semibold text-slate-100">Submit IT Support Request</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Standardized ticket intake portal for technical assistance and tracking</p>
+          </div>
+          <button id="modal-submit-close" class="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Quick Scenario Presets -->
+        <div class="px-6 pt-4 pb-2 border-b border-slate-800/60 bg-slate-950/30">
+          <div class="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
+            <svg class="h-3 w-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Common Quick Templates:</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" class="preset-template-btn rounded border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 hover:border-indigo-500/50 hover:text-white transition-colors" data-preset="wifi">Office Wi-Fi Drop</button>
+            <button type="button" class="preset-template-btn rounded border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 hover:border-indigo-500/50 hover:text-white transition-colors" data-preset="dock">Docking Monitor Issue</button>
+            <button type="button" class="preset-template-btn rounded border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 hover:border-indigo-500/50 hover:text-white transition-colors" data-preset="sso">SSO / Okta Lockout</button>
+            <button type="button" class="preset-template-btn rounded border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 hover:border-indigo-500/50 hover:text-white transition-colors" data-preset="phish">Phishing Alert</button>
+          </div>
+        </div>
+
+        <!-- Intake Form -->
+        <form id="form-new-ticket" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          <!-- Active Logged In Submitter Banner -->
+          <div id="submit-user-banner" class="flex items-center justify-between rounded-md border border-slate-800 bg-slate-950/80 p-2.5 text-xs">
+            <div class="flex items-center gap-2.5">
+              <div id="submit-user-avatar" class="h-6 w-6 rounded-full bg-indigo-600/30 text-indigo-300 font-bold flex items-center justify-center text-[10px] shrink-0 border border-indigo-500/40">
+                SJ
+              </div>
+              <div>
+                <span class="text-slate-400">Submitting as:</span>
+                <strong id="submit-user-name" class="text-slate-200">Sarah Jenkins</strong>
+                <span class="text-slate-500 text-[11px]">(<span id="submit-user-email">sarah.jenkins@company.internal</span>)</span>
+                <span aria-hidden="true" class="text-slate-600">·</span>
+                <span id="submit-user-dept" class="text-slate-400 text-[11px]">IT & Systems</span>
+              </div>
+            </div>
+            <button type="button" id="btn-switch-user-from-submit" class="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline shrink-0">
+              Switch
+            </button>
+          </div>
+
+          <div id="submit-error-banner" class="hidden flex items-center gap-2 rounded-md border border-red-900/50 bg-red-950/30 p-3 text-xs text-red-300">
+            <svg class="h-4 w-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span id="submit-error-text"></span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Your Full Name <span class="text-rose-400">*</span></label>
+              <input id="new-submitter-name" type="text" required placeholder="e.g. Jordan Blake" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Corporate Email <span class="text-rose-400">*</span></label>
+              <input id="new-submitter-email" type="email" required placeholder="j.blake@company.internal" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Department</label>
+              <select id="new-department" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                <option value="Engineering">Engineering</option>
+                <option value="Data & Analytics">Data & Analytics</option>
+                <option value="Design">Design</option>
+                <option value="Finance">Finance</option>
+                <option value="Sales">Sales</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Operations">Operations</option>
+                <option value="Customer Support">Customer Support</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Device / Asset Tag <span class="text-slate-500 text-[10px]">(Optional)</span></label>
+              <input id="new-asset-tag" type="text" placeholder="e.g. MBP-2024-ENG-12 or PRN-3F" class="w-full rounded-md border border-slate-800 bg-slate-950 py-1.5 px-3 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none font-mono" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Issue Summary / Headline <span class="text-rose-400">*</span></label>
+            <input id="new-title" type="text" required placeholder="Concise summary of the technical failure" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
+              <select id="new-category" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                <option value="hardware">Hardware & Peripherals</option>
+                <option value="network">Network & Wi-Fi Connectivity</option>
+                <option value="software">Software & Applications</option>
+                <option value="access">Identity, IAM & Permissions</option>
+                <option value="security">Security & Incident Response</option>
+                <option value="other">General Technical Request</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Priority & SLA Target</label>
+              <select id="new-priority" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none font-medium">
+                <option value="critical">Critical (4h Target - System Down)</option>
+                <option value="high">High (12h Target - Severe Impact)</option>
+                <option value="medium" selected>Medium (24h Target - Standard Issue)</option>
+                <option value="low">Low (48h Target - Minor Inconvenience)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Detailed Description & Steps to Reproduce <span class="text-rose-400">*</span></label>
+            <textarea id="new-description" required rows="4" placeholder="What were you doing when the error occurred? What error message appeared? What troubleshooting steps have been tried?" class="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none leading-relaxed"></textarea>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+            <button type="button" id="modal-submit-cancel" class="rounded-md border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">Cancel</button>
+            <button type="submit" id="btn-submit-ticket-action" class="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 transition-colors">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              <span>Submit Ticket</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Ticket Detail & Activity Timeline -->
+    <div id="modal-detail" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+      <div class="relative w-full max-w-3xl rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden my-8">
+        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-6 py-4">
+          <div class="flex items-center gap-3">
+            <span id="detail-ticket-id" class="font-mono text-sm font-bold text-indigo-400">TCK-0000</span>
+            <span aria-hidden="true" class="text-slate-700">|</span>
+            <span id="detail-created-time" class="text-xs text-slate-400">Created just now</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-delete-detail-ticket" title="Delete ticket" class="flex items-center gap-1 rounded border border-red-900/40 bg-red-950/20 px-2 py-1 text-xs text-red-400 hover:bg-red-950/60 transition-colors">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              <span class="hidden sm:inline">Delete</span>
+            </button>
+            <button id="modal-detail-close" class="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+          <!-- Title & Context -->
+          <div>
+            <h2 id="detail-title" class="text-lg font-semibold text-slate-100 leading-snug"></h2>
+            <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <span id="detail-category-badge"></span>
+              <span aria-hidden="true" class="text-slate-600">·</span>
+              <span id="detail-department-text"></span>
+              <span id="detail-asset-wrapper" class="hidden items-center gap-1 font-mono text-slate-300">
+                <span aria-hidden="true" class="text-slate-600">·</span>
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span id="detail-asset-tag"></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Controls Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border border-slate-800 bg-slate-950/60 p-3.5 text-xs">
+            <div>
+              <label class="text-[11px] font-medium text-slate-400 mb-1 block">Status</label>
+              <select id="detail-select-status" class="w-full rounded border border-slate-800 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none font-medium">
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed / Archived</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] font-medium text-slate-400 mb-1 block">Priority & SLA</label>
+              <select id="detail-select-priority" class="w-full rounded border border-slate-800 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                <option value="critical">Critical (4h Target)</option>
+                <option value="high">High (12h Target)</option>
+                <option value="medium">Medium (24h Target)</option>
+                <option value="low">Low (48h Target)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] font-medium text-slate-400 mb-1 block">Assigned Specialist</label>
+              <select id="detail-select-assignee" class="w-full rounded border border-slate-800 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+          </div>
+
+          <!-- SLA Banner -->
+          <div id="detail-sla-banner" class="flex items-center justify-between rounded-md border border-slate-800/80 bg-slate-900/60 px-3.5 py-2 text-xs">
+            <div class="flex items-center gap-2 text-slate-400">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7v5l3 3"/></svg>
+              <span>SLA Target:</span>
+              <span id="detail-sla-due-text" class="font-mono text-slate-200"></span>
+            </div>
+            <div id="detail-sla-status-badge" class="font-mono tabular-nums"></div>
+          </div>
+
+          <!-- Description Box -->
+          <div class="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Problem Description & Reproduction</h3>
+            <p id="detail-description-text" class="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed"></p>
+            <div class="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+              <div>Reported by: <strong id="detail-submitter-name" class="text-slate-300"></strong></div>
+              <div id="detail-submitter-email"></div>
+              <div id="detail-submitter-dept"></div>
+            </div>
+          </div>
+
+          <!-- Official Resolution Notes (if any) -->
+          <div id="detail-resolution-box" class="hidden rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-4">
+            <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-1.5">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Official Resolution Summary</span>
+            </div>
+            <p id="detail-resolution-text" class="text-xs text-emerald-200/90 leading-relaxed"></p>
+          </div>
+
+          <!-- Chronological Activity Timeline -->
+          <div>
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Activity & Resolution Timeline</span>
+            </h3>
+            <div id="detail-timeline-container" class="space-y-3 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-px before:bg-slate-800"></div>
+          </div>
+
+          <!-- Add Work Note Form -->
+          <form id="form-add-note" class="space-y-2 pt-2 border-t border-slate-800">
+            <label class="text-xs font-medium text-slate-300 block">Add Diagnostic / Work Note</label>
+            <div class="flex gap-2">
+              <textarea id="input-new-note" rows="2" placeholder="Record diagnostic steps, vendor updates, or resolution actions..." class="flex-1 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none"></textarea>
+              <button type="submit" id="btn-submit-note" class="flex items-center gap-1.5 self-end rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-500 transition-colors">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                <span>Log Note</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: User Account & Role Switcher -->
+    <div id="modal-auth" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+      <div class="relative w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden my-8">
+        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-6 py-4">
+          <div>
+            <h2 class="text-base font-semibold text-slate-100">Switch User & Role</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Test individual company employee workflows, IT admin triage, or guest requests</p>
+          </div>
+          <button id="modal-auth-close" class="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          <!-- 1-Click Persona Quick Switch -->
+          <div>
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <span>Quick Role Switcher</span>
+            </h3>
+            <div id="quick-user-list" class="space-y-2">
+              <!-- Dynamically rendered via app.js -->
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="relative flex py-1 items-center">
+            <div class="flex-grow border-t border-slate-800"></div>
+            <span class="flex-shrink mx-3 text-[10px] text-slate-500 uppercase tracking-wider">Or Log In / Register Employee</span>
+            <div class="flex-grow border-t border-slate-800"></div>
+          </div>
+
+          <!-- Custom Company Employee Form -->
+          <form id="form-custom-auth" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Employee Full Name</label>
+                <input id="auth-name" type="text" required placeholder="e.g. Liam Vance" class="w-full rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Company Work Email</label>
+                <input id="auth-email" type="email" required placeholder="l.vance@company.internal" class="w-full rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Department</label>
+                <select id="auth-dept" class="w-full rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                  <option value="Engineering">Engineering</option>
+                  <option value="Data & Analytics">Data & Analytics</option>
+                  <option value="Design">Design</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Customer Support">Customer Support</option>
+                  <option value="Human Resources">Human Resources</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-slate-300 mb-1">Role Permission</label>
+                <select id="auth-role" class="w-full rounded-md border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                  <option value="user">Company Employee (Standard User)</option>
+                  <option value="admin">IT Admin Specialist</option>
+                  <option value="guest">Guest / External Contractor</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="w-full flex items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-500 transition-colors">
+              <span>Sign In / Create Employee Profile</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-5 right-5 z-50 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs text-slate-100 shadow-xl backdrop-blur-md flex items-center gap-2 transition-all">
+      <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+      <span id="toast-message"></span>
+    </div>
+
+    <!-- Application Script (Vanilla JS) -->
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

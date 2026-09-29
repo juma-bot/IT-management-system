@@ -1,0 +1,6 @@
+{
+  "name": "IT Support Ticket Management System",
+  "description": "Enterprise IT support ticketing platform for submitting, prioritizing, and resolving technical issues across hardware, network, software, and access management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
